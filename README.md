@@ -1,9 +1,13 @@
 # Hey there👋, im Kelvi - aka [kelvi919]
-I'm a student and hobby developer who's specializing on Python and it's modules,
-I'm working on varios projects as you can hopefully see in my repositories ;^).
+
+In my spare time, I develop programs using Python and its modules as a hobby.
+I am working on a variety of projects, as you can hopefully see in my repositories ;^).
+If you want you can see all of my better than average projects on my github profile.
+I would appreciate any help you can provide. 
+I can be reached via Discord Kelvi919#4698.
 
 
 ### Stats
 
 ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=kelvi919&theme=radical)
->>>>>>> 1930c90f6982ce99d010ec0c20d03ea93d796eaa
+
