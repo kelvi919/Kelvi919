@@ -13,4 +13,4 @@ I can be reached via Discord Kelvi919#4698.
 
 ### lango
 
-[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=kelvi919&layout=compact)](https://github.com/anuraghazra/github-readme-stats)
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=kelvi919&layout=compact&bg_color=COLOR1)](https://github.com/anuraghazra/github-readme-stats)
