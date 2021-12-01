@@ -13,5 +13,4 @@ I can be reached via Discord Kelvi919#4698.
 
 ### lango
 
-
-[![willianrod's wakatime stats](https://github-readme-stats.vercel.app/api/wakatime?username=kelvi919)](https://github.com/anuraghazra/github-readme-stats)
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=kelvi919&layout=compact)](https://github.com/anuraghazra/github-readme-stats)
