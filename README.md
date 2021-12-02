@@ -11,3 +11,5 @@ I can be reached via Discord Kelvi919#4698.
 
 ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=kelvi919&theme=radical)
 
+[![Pycharm](https://github.com/kelvi919/assets/assets/pycharm.png)](https://www.jetbrains.com)
+
