@@ -18,3 +18,5 @@ I can be reached via Discord Kelvi919#4698.
 [![VSCode](https://github.com/kelvi919/Kelvi919/blob/master/assets/vscode.png)](https://code.visualstudio.com/)  
 [![Pycharm](https://github.com/kelvi919/Kelvi919/blob/master/assets/pycharm.png)](https://www.jetbrains.com)
 
+### Languages 
+[![Python()](https://www.python.org)
