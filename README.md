@@ -2,7 +2,7 @@
 
 In my spare time, I develop programs using Python and its modules as a hobby.
 I am working on a variety of projects, as you can hopefully see in my repositories ;^).
-If you want you can see all of my projects on my github profile and would appreciate any help you can provide. 
+If you want you can see all of my projects on my github profile and I would appreciate any help you can provide. 
 I can be reached via Discord Kelvi919#4698.
 
 
