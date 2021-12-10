@@ -20,7 +20,7 @@ I can be reached via Discord Kelvi919#4698.
 [![Python](https://github.com/kelvi919/Kelvi919/blob/master/assets/python40.png)](https://www.python.org) 
 
 ### My social media
-[![Instagram](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/2048px-Instagram_icon.png=250x250)](www.instagram.com/kelvi_919) 
-[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter40.png=250x250)](https://twitter.com/kelvi919) 
+[![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](www.instagram.com/kelvi_919) 
+[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter40.png)](https://twitter.com/kelvi919) 
 
 
