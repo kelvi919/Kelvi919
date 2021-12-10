@@ -16,11 +16,11 @@ I can be reached via Discord Kelvi919#4698.
 ### Tools and Languages 
 
 [![VSCode](https://github.com/kelvi919/Kelvi919/blob/master/assets/vscode40.png)](https://code.visualstudio.com/)  
-[![Pycharm](https://github.com/kelvi919/Kelvi919/blob/master/assets/pycharm40.png)](https://www.jetbrains.com)
-[![Python](https://github.com/kelvi919/Kelvi919/blob/master/assets/python40.png)](https://www.python.org)
+[![Pycharm](https://github.com/kelvi919/Kelvi919/blob/master/assets/pycharm40.png)](https://www.jetbrains.com)  
+[![Python](https://github.com/kelvi919/Kelvi919/blob/master/assets/python40.png)](https://www.python.org)  
 
 ### My social media
-[![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](https://www.instagram.com/kelvi_919/)
-[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter40.png)](https://twitter.com/kelvi919)
+[![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](www.instgram.com/kelvi_919)  
+[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter40.png)](https://twitter.com/kelvi919)  
 
 
