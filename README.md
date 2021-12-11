@@ -21,6 +21,7 @@ I can be reached via Discord Kelvi919#4698.
 
 ### My social media
 [![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](www.instagram.com/kelvi_919) 
-[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter40.png)](https://twitter.com/kelvi919) 
+[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter100-29.png)](https://twitter.com/kelvi919) 
 
 
+ 
