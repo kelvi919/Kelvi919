@@ -17,7 +17,7 @@ or my other social media linked below.
 
 ### My social media
 [![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](https://instagram.com/kelvi_919) 
-[![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter120-40.png)](https://twitter.com/kelvi919) 
+
 
 
  
