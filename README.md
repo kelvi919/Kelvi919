@@ -1,16 +1,12 @@
 # Hey there👋, im Kelvi - aka [kelvi919]
 
-In my spare time, I develop programs using Python and its modules as a hobby.
-I am working on a variety of projects, as you can hopefully see in my repositories ;^).
-If you want you can see all of my projects on my github profile and I would appreciate any help you can provide. 
-I can be reached via Email:Kelvikuqi919@gmail.com Discord:Kelvi919#4698 or the other social media linked below.
-
-
-### Stats
-
-![GitHub Stats](https://github-readme-stats.vercel.app/api?username=kelvi919&theme=radical)
-
-
+In my spare time, I develop things as a hobby and post some of what I do on Github.
+I am working on a variety of projects, as you can hopefully see in my repositories ;).
+You can see some of my work on GitHub and i would appreciate any help you can provide. 
+I can be reached via 
+Email:Kelvikuqi919@gmail.com 
+Discord:Kelvi919#4698 
+or my other social media linked below.
 
 
 ### Tools and Languages 
