@@ -20,7 +20,7 @@ I can be reached via Email:Kelvikuqi919@gmail.com Discord:Kelvi919#4698 or the o
 [![Python](https://github.com/kelvi919/Kelvi919/blob/master/assets/python40.png)](https://www.python.org) 
 
 ### My social media
-[![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](www.instagram.com/kelvi_919) 
+[![Instagram](https://github.com/kelvi919/Kelvi919/blob/master/assets/instagram40.png)](https://instagram.com/kelvi_919) 
 [![twitter](https://github.com/kelvi919/Kelvi919/blob/master/assets/twitter120-40.png)](https://twitter.com/kelvi919) 
 
 
