@@ -1,7 +1,9 @@
 # Bar Owner Scraper — Sarasota, FL
 
-Finds bars in Sarasota and nearby cities, then scrapes each business website
-for the owner's name, email, phone, and Instagram handle.
+Finds bars in Sarasota and nearby cities, scrapes each business website
+for the owner's name, email, and Instagram handle, and cross-references
+Florida's **SunBiz** (Division of Corporations) database to verify the
+business is active and find the registered owner/manager.
 Results are saved to a CSV ready for outreach.
 
 ---
@@ -50,7 +52,13 @@ Results are saved to `output/bar_owners_sarasota.csv`
 | Address | Google Places |
 | Phone | Google Places |
 | Website | Google Places |
-| Owner Name | Business website (About/Contact pages) |
+| Owner Name | Website first, SunBiz as fallback |
+| Owner Source | `website` or `sunbiz` — where the name came from |
+| Owner Title (SunBiz) | e.g. MGR, PRES, MEMBER |
+| SunBiz Active | Yes / No — is the LLC currently active? |
+| SunBiz Entity | Exact registered entity name |
+| SunBiz Address | Principal address on file with the state |
+| SunBiz URL | Direct link to their SunBiz filing page |
 | Email | Business website |
 | Instagram | Business website |
 | Google Maps URL | Google Places |
@@ -82,4 +90,7 @@ Add or remove cities in `config.py` → `SEARCH_LOCATIONS`.
   A full run typically uses a few hundred requests, well within the free limit.
 - Owner name detection works best on bars with an About or Contact page.
   Many small bars won't have websites — those rows will still appear with phone number.
+- **SunBiz** is Florida's free public business registry — no API key needed.
+  If the website doesn't list an owner, SunBiz often has the registered manager/member.
+- Only **ACTIVE** SunBiz entities are used. Dissolved or inactive LLCs are ignored.
 - The scraper is polite (1.5s delay between requests) to avoid being blocked.
