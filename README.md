@@ -4,7 +4,7 @@ In my spare time, I develop things as a hobby and post some of what I do on Gith
 I am working on a variety of projects, as you can hopefully see in my repositories ;).
 You can see some of my work on GitHub and i would appreciate any help you can provide. 
 I can be reached via 
-Email:Kelvikuqi919@gmail.com 
+
 Discord:Kelvi919#4698 
 or my other social media linked below.
 
