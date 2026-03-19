@@ -18,6 +18,7 @@ import pandas as pd
 from config import OUTPUT_FILE, REQUEST_DELAY
 from places_finder import find_all_bars
 from website_scraper import scrape_website
+from sunbiz_scraper import lookup_sunbiz
 
 
 def run():
@@ -33,14 +34,16 @@ def run():
         print("\n[!] No bars found. Check your API key and try again.")
         return
 
-    # Step 2: Scrape each bar's website
-    print(f"\n[STEP 2] Scraping websites for {len(bars)} bars...")
+    # Step 2: Scrape each bar's website + SunBiz lookup
+    print(f"\n[STEP 2] Scraping websites + SunBiz for {len(bars)} bars...")
     rows = []
 
     for i, bar in enumerate(bars, 1):
         name = bar["business_name"]
         website = bar.get("website", "")
         print(f"\n  [{i}/{len(bars)}] {name}")
+
+        # --- Website scrape ---
         if website:
             print(f"    Website: {website}")
             web_data = scrape_website(website)
@@ -48,19 +51,45 @@ def run():
             print(f"    No website found, skipping web scrape.")
             web_data = {"owner_name": "", "email": "", "instagram": ""}
 
+        # --- SunBiz lookup ---
+        print(f"    [SunBiz] Looking up '{name}' ...")
+        sunbiz = lookup_sunbiz(name)
+
+        if sunbiz["found"] and sunbiz["active"]:
+            print(f"    [SunBiz] ACTIVE — {sunbiz['entity_name']}")
+            print(f"    [SunBiz] Owner:  {sunbiz['owner_name'] or '—'} ({sunbiz['owner_title'] or '—'})")
+        elif sunbiz["found"] and not sunbiz["active"]:
+            print(f"    [SunBiz] Found but NOT active — skipping")
+        else:
+            print(f"    [SunBiz] No match found")
+
+        # Use SunBiz owner name as fallback if website scrape didn't find one
+        owner_name   = web_data["owner_name"] or sunbiz.get("owner_name", "")
+        owner_source = ""
+        if web_data["owner_name"]:
+            owner_source = "website"
+        elif sunbiz.get("owner_name"):
+            owner_source = "sunbiz"
+
         row = {
-            "Business Name":  name,
-            "Address":        bar.get("address", ""),
-            "Phone":          bar.get("phone", ""),
-            "Website":        website,
-            "Owner Name":     web_data["owner_name"],
-            "Email":          web_data["email"],
-            "Instagram":      web_data["instagram"],
-            "Google Maps":    bar.get("google_maps_url", ""),
-            "Search City":    bar.get("search_location", ""),
+            "Business Name":        name,
+            "Address":              bar.get("address", ""),
+            "Phone":                bar.get("phone", ""),
+            "Website":              website,
+            "Owner Name":           owner_name,
+            "Owner Source":         owner_source,
+            "Owner Title (SunBiz)": sunbiz.get("owner_title", ""),
+            "SunBiz Active":        "Yes" if sunbiz["active"] else ("No" if sunbiz["found"] else ""),
+            "SunBiz Entity":        sunbiz.get("entity_name", ""),
+            "SunBiz Address":       sunbiz.get("principal_address", ""),
+            "SunBiz URL":           sunbiz.get("detail_url", ""),
+            "Email":                web_data["email"],
+            "Instagram":            web_data["instagram"],
+            "Google Maps":          bar.get("google_maps_url", ""),
+            "Search City":          bar.get("search_location", ""),
         }
         rows.append(row)
-        print(f"    Owner:     {web_data['owner_name'] or '—'}")
+        print(f"    Owner:     {owner_name or '—'}  [{owner_source or '—'}]")
         print(f"    Email:     {web_data['email'] or '—'}")
         print(f"    Instagram: {web_data['instagram'] or '—'}")
 
@@ -76,18 +105,24 @@ def run():
     df.to_csv(OUTPUT_FILE, index=False)
 
     # Summary
-    total = len(df)
+    total          = len(df)
     with_phone     = df["Phone"].astype(bool).sum()
     with_email     = df["Email"].astype(bool).sum()
     with_instagram = df["Instagram"].astype(bool).sum()
     with_owner     = df["Owner Name"].astype(bool).sum()
+    from_website   = (df["Owner Source"] == "website").sum()
+    from_sunbiz    = (df["Owner Source"] == "sunbiz").sum()
+    sunbiz_active  = (df["SunBiz Active"] == "Yes").sum()
 
     print("\n" + "=" * 60)
     print(f"  DONE! {total} bars saved to {OUTPUT_FILE}")
-    print(f"  With phone:     {with_phone}/{total}")
-    print(f"  With email:     {with_email}/{total}")
-    print(f"  With Instagram: {with_instagram}/{total}")
-    print(f"  With owner name:{with_owner}/{total}")
+    print(f"  With phone:          {with_phone}/{total}")
+    print(f"  With email:          {with_email}/{total}")
+    print(f"  With Instagram:      {with_instagram}/{total}")
+    print(f"  With owner name:     {with_owner}/{total}")
+    print(f"    └ from website:    {from_website}")
+    print(f"    └ from SunBiz:     {from_sunbiz}")
+    print(f"  Active on SunBiz:    {sunbiz_active}/{total}")
     print("=" * 60)
 
 
