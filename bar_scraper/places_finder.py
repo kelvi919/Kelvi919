@@ -1,5 +1,5 @@
 """
-Uses Google Places API to find bars in Sarasota and nearby cities.
+Uses Google Places API to find 21+ bars and nightclubs in Sarasota.
 Returns a list of place dicts with name, address, phone, website, and place_id.
 """
 
@@ -9,8 +9,11 @@ from config import GOOGLE_API_KEY, SEARCH_LOCATIONS, MAX_RESULTS_PER_QUERY, REQU
 
 PLACE_TYPES = ["bar", "night_club"]
 
-# Search radius in meters for each city (~8 km covers most small FL cities well)
-SEARCH_RADIUS = 8000
+# Search radius in meters (~10 km covers all of Sarasota city proper)
+SEARCH_RADIUS = 10000
+
+# If a place also carries any of these types, it allows minors — skip it
+FAMILY_TYPES = {"restaurant", "cafe", "bakery", "meal_delivery", "meal_takeaway", "food"}
 
 
 def get_places_client():
@@ -25,7 +28,7 @@ def get_places_client():
 
 
 def geocode_location(client, location):
-    """Convert a city name to (lat, lng) coordinates."""
+    """Convert a city name string to (lat, lng) coordinates."""
     try:
         result = client.geocode(location)
         if result:
@@ -34,6 +37,21 @@ def geocode_location(client, location):
     except Exception as e:
         print(f"  [!] Could not geocode '{location}': {e}")
     return None
+
+
+def is_21_plus(place):
+    """
+    Returns True only if the place is a 21+ bar or nightclub.
+    Google has no explicit age-restriction field, so we use type tags:
+    - Must be typed as bar or night_club
+    - Must NOT also be tagged as restaurant/cafe/food (those let minors in)
+    """
+    types = set(place.get("types", []))
+    if not types & {"bar", "night_club"}:
+        return False
+    if types & FAMILY_TYPES:
+        return False
+    return True
 
 
 def fetch_place_details(client, place_id):
@@ -51,9 +69,8 @@ def fetch_place_details(client, place_id):
 
 def search_nearby_by_type(client, coords, place_type, location_name):
     """
-    Use Nearby Search to find all places of a given type within SEARCH_RADIUS of coords.
-    This is the correct API for 'find all bars near a location' — text search is not.
-    Google returns only the requested type, so restaurants never appear.
+    Nearby Search for a specific type within SEARCH_RADIUS of coordinates.
+    This is the correct API for geographic area searches — not text search.
     """
     places = []
     print(f"  Searching: {place_type} near {location_name}")
@@ -63,7 +80,7 @@ def search_nearby_by_type(client, coords, place_type, location_name):
         places.extend(response.get("results", []))
 
         while "next_page_token" in response and len(places) < MAX_RESULTS_PER_QUERY:
-            time.sleep(2)  # Google requires a short delay before next_page_token is valid
+            time.sleep(2)  # required delay before next_page_token is valid
             response = client.places_nearby(
                 location=coords,
                 radius=SEARCH_RADIUS,
@@ -80,7 +97,7 @@ def search_nearby_by_type(client, coords, place_type, location_name):
 
 def find_all_bars():
     """
-    Search all configured locations for bars and nightclubs.
+    Search all configured locations for 21+ bars and nightclubs.
     Returns a deduplicated list of bar dicts.
     """
     client = get_places_client()
@@ -94,6 +111,7 @@ def find_all_bars():
         if not coords:
             print(f"  [!] Skipping — could not geocode '{location}'")
             continue
+        print(f"  Coordinates: {coords[0]:.4f}, {coords[1]:.4f}")
 
         for place_type in PLACE_TYPES:
             raw_results = search_nearby_by_type(client, coords, place_type, location)
@@ -105,6 +123,11 @@ def find_all_bars():
                     continue
 
                 if place.get("business_status") == "CLOSED_PERMANENTLY":
+                    continue
+
+                # Skip places that allow minors (restaurants/cafes that happen to have a bar)
+                if not is_21_plus(place):
+                    print(f"    - Skipped (not 21+): {place.get('name', '')} {place.get('types', [])}")
                     continue
 
                 seen_place_ids.add(place_id)
@@ -125,5 +148,5 @@ def find_all_bars():
                 all_bars.append(bar)
                 print(f"    + {bar['business_name']} | {bar['phone'] or 'no phone'}")
 
-    print(f"\n[*] Total unique bars/nightclubs found: {len(all_bars)}")
+    print(f"\n[*] Total unique 21+ bars/nightclubs found: {len(all_bars)}")
     return all_bars

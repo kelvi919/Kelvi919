@@ -12,19 +12,9 @@ if _env_file.exists():
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
-# Sarasota + nearby cities to search
+# Cities to search
 SEARCH_LOCATIONS = [
     "Sarasota, FL",
-    "Bradenton, FL",
-    "Venice, FL",
-    "North Port, FL",
-    "Osprey, FL",
-    "Nokomis, FL",
-    "Englewood, FL",
-    "Palmetto, FL",
-    "Siesta Key, FL",
-    "Longboat Key, FL",
-    "Lakewood Ranch, FL",
 ]
 
 # Output file
