@@ -5,7 +5,12 @@ Returns a list of place dicts with name, address, phone, website, and place_id.
 
 import time
 import googlemaps
-from config import GOOGLE_API_KEY, SEARCH_LOCATIONS, BAR_SEARCH_TERMS, MAX_RESULTS_PER_QUERY, REQUEST_DELAY
+from config import GOOGLE_API_KEY, SEARCH_LOCATIONS, MAX_RESULTS_PER_QUERY, REQUEST_DELAY
+
+PLACE_TYPES = ["bar", "night_club"]
+
+# Search radius in meters for each city (~8 km covers most small FL cities well)
+SEARCH_RADIUS = 8000
 
 
 def get_places_client():
@@ -17,6 +22,18 @@ def get_places_client():
             "3. Create an API key and paste it in your .env file"
         )
     return googlemaps.Client(key=GOOGLE_API_KEY)
+
+
+def geocode_location(client, location):
+    """Convert a city name to (lat, lng) coordinates."""
+    try:
+        result = client.geocode(location)
+        if result:
+            loc = result[0]["geometry"]["location"]
+            return (loc["lat"], loc["lng"])
+    except Exception as e:
+        print(f"  [!] Could not geocode '{location}': {e}")
+    return None
 
 
 def fetch_place_details(client, place_id):
@@ -32,33 +49,38 @@ def fetch_place_details(client, place_id):
         return {}
 
 
-def search_bars_in_location(client, location, search_term):
-    """Search for bars matching search_term in a given location. Returns list of raw place results."""
+def search_nearby_by_type(client, coords, place_type, location_name):
+    """
+    Use Nearby Search to find all places of a given type within SEARCH_RADIUS of coords.
+    This is the correct API for 'find all bars near a location' — text search is not.
+    Google returns only the requested type, so restaurants never appear.
+    """
     places = []
-    query = f"{search_term} in {location}"
-    print(f"  Searching: {query}")
+    print(f"  Searching: {place_type} near {location_name}")
 
     try:
-        response = client.places(query=query)
+        response = client.places_nearby(location=coords, radius=SEARCH_RADIUS, type=place_type)
         places.extend(response.get("results", []))
 
-        # Google Places allows up to 3 pages (20 results each = 60 max)
-        page = 1
         while "next_page_token" in response and len(places) < MAX_RESULTS_PER_QUERY:
             time.sleep(2)  # Google requires a short delay before next_page_token is valid
-            response = client.places(query=query, page_token=response["next_page_token"])
+            response = client.places_nearby(
+                location=coords,
+                radius=SEARCH_RADIUS,
+                type=place_type,
+                page_token=response["next_page_token"],
+            )
             places.extend(response.get("results", []))
-            page += 1
 
     except Exception as e:
-        print(f"  [!] Search failed for '{query}': {e}")
+        print(f"  [!] Search failed for {place_type} near {location_name}: {e}")
 
     return places
 
 
 def find_all_bars():
     """
-    Search all configured locations and search terms.
+    Search all configured locations for bars and nightclubs.
     Returns a deduplicated list of bar dicts.
     """
     client = get_places_client()
@@ -67,8 +89,14 @@ def find_all_bars():
 
     for location in SEARCH_LOCATIONS:
         print(f"\n[*] Location: {location}")
-        for term in BAR_SEARCH_TERMS:
-            raw_results = search_bars_in_location(client, location, term)
+
+        coords = geocode_location(client, location)
+        if not coords:
+            print(f"  [!] Skipping — could not geocode '{location}'")
+            continue
+
+        for place_type in PLACE_TYPES:
+            raw_results = search_nearby_by_type(client, coords, place_type, location)
             time.sleep(REQUEST_DELAY)
 
             for place in raw_results:
@@ -76,13 +104,11 @@ def find_all_bars():
                 if not place_id or place_id in seen_place_ids:
                     continue
 
-                # Skip permanently closed places
                 if place.get("business_status") == "CLOSED_PERMANENTLY":
                     continue
 
                 seen_place_ids.add(place_id)
 
-                # Fetch full details (phone + website)
                 details = fetch_place_details(client, place_id)
                 time.sleep(REQUEST_DELAY)
 
@@ -97,7 +123,7 @@ def find_all_bars():
                 }
 
                 all_bars.append(bar)
-                print(f"    + Found: {bar['business_name']} | {bar['phone'] or 'no phone'}")
+                print(f"    + {bar['business_name']} | {bar['phone'] or 'no phone'}")
 
-    print(f"\n[*] Total unique bars found: {len(all_bars)}")
+    print(f"\n[*] Total unique bars/nightclubs found: {len(all_bars)}")
     return all_bars

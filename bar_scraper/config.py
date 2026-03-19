@@ -1,7 +1,14 @@
 import os
-from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+# Read .env file manually — works regardless of encoding or dotenv issues
+_env_file = Path(__file__).parent / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text(encoding="utf-8-sig").splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _key, _val = _line.split("=", 1)
+            os.environ.setdefault(_key.strip(), _val.strip())
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
@@ -18,16 +25,6 @@ SEARCH_LOCATIONS = [
     "Siesta Key, FL",
     "Longboat Key, FL",
     "Lakewood Ranch, FL",
-]
-
-# Search terms to find bars
-BAR_SEARCH_TERMS = [
-    "bar",
-    "tavern",
-    "pub",
-    "nightclub",
-    "lounge",
-    "sports bar",
 ]
 
 # Output file
