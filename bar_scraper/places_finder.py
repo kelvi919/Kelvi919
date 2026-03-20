@@ -17,21 +17,48 @@ PLACE_KEYWORDS = ["pub", "tavern", "dive bar", "sports bar", "lounge"]
 # Search radius in meters (~10 km covers all of Sarasota city proper)
 SEARCH_RADIUS = 10000
 
-# Patterns to find owner names mentioned in reviews
-# e.g. "the owner John", "owner Maria runs", "John Smith, the owner"
-_OWNER_RE = [
-    re.compile(r"\bowner[,\s]+([A-Z][a-z]+(?: [A-Z][a-z]+)+)", re.IGNORECASE),
-    re.compile(r"\b([A-Z][a-z]+(?: [A-Z][a-z]+)+)[,\s]+(?:is\s+the\s+)?owner", re.IGNORECASE),
-    re.compile(r"\bowned\s+by\s+([A-Z][a-z]+(?: [A-Z][a-z]+)+)", re.IGNORECASE),
-    re.compile(r"\bask\s+for\s+([A-Z][a-z]+(?: [A-Z][a-z]+)+)[,\s]+(?:he|she|they)?.{0,30}own", re.IGNORECASE),
-    re.compile(r"\bproprietor\s+([A-Z][a-z]+(?: [A-Z][a-z]+)+)", re.IGNORECASE),
-    re.compile(r"\b([A-Z][a-z]+(?: [A-Z][a-z]+)+)\s+(?:runs|operates|opened)\s+(?:this|the)\s+(?:bar|place|pub|club|spot)", re.IGNORECASE),
+# ── Owner name extraction from reviews ──────────────────────────────────────
+#
+# Two tiers:
+#   HIGH-CONFIDENCE  — full "First Last" near an owner keyword  (weight 3)
+#   MEDIUM-CONFIDENCE — first name only near a strong owner keyword (weight 1)
+#
+# We collect weighted votes across all reviews and pick the winner.
+# A single first-name needs 3+ total weight (i.e. 3 separate mentions) to win
+# over a zero-vote two-word name.
+
+_NAME2 = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)"   # two-word+ proper name
+_NAME1 = r"([A-Z][a-z]{2,})"                     # single capitalized word ≥3 chars
+
+# High-confidence patterns — group 1 must be the name
+_HIGH_RE = [
+    re.compile(rf"\bowner[,:\s]+{_NAME2}",                              re.IGNORECASE),
+    re.compile(rf"\bowned\s+by\s+{_NAME2}",                             re.IGNORECASE),
+    re.compile(rf"{_NAME2}[,\s]+(?:is\s+)?(?:the\s+)?owner\b",         re.IGNORECASE),
+    re.compile(rf"{_NAME2}\s+\(owner\)",                                re.IGNORECASE),
+    re.compile(rf"\bproprietor\s+{_NAME2}",                             re.IGNORECASE),
+    re.compile(rf"{_NAME2}\s+(?:owns|founded|opened|started)\s+(?:this|the)\b", re.IGNORECASE),
+    re.compile(rf"\bask\s+for\s+{_NAME2}[,\s]+(?:he|she|they).{{0,40}}own", re.IGNORECASE),
+    re.compile(rf"\bmanaged\s+by\s+{_NAME2}",                           re.IGNORECASE),
+    re.compile(rf"{_NAME2}[,\s]+(?:the\s+)?(?:owner|founder|proprietor)", re.IGNORECASE),
 ]
 
-# False-positive owner names to reject
-_REJECT_NAMES = {
-    "Google", "Yelp", "Facebook", "Instagram", "Happy Hour",
-    "The Bar", "This Place", "Great Service",
+# Medium-confidence patterns — first name only
+_MED_RE = [
+    re.compile(rf"\bthe\s+owner[,\s]+{_NAME1}\b",                       re.IGNORECASE),
+    re.compile(rf"\bowner\s+{_NAME1}\b",                                re.IGNORECASE),
+    re.compile(rf"\b{_NAME1}\s+is\s+the\s+owner\b",                    re.IGNORECASE),
+    re.compile(rf"\bowned\s+by\s+{_NAME1}\b",                          re.IGNORECASE),
+    re.compile(rf"\bask\s+for\s+{_NAME1}[,\s]+(?:he|she).{{0,30}}own", re.IGNORECASE),
+]
+
+# Words that look like proper nouns but are NOT owner names
+_REJECT = {
+    "google", "yelp", "facebook", "instagram", "tripadvisor",
+    "this", "the", "great", "good", "best", "happy", "nice",
+    "staff", "bar", "pub", "place", "food", "service", "management",
+    "definitely", "absolutely", "highly", "overall", "sarasota",
+    "florida", "downtown", "manager", "owner",
 }
 
 
@@ -60,27 +87,56 @@ def geocode_location(client, location):
 
 def extract_owner_from_reviews(reviews):
     """
-    Scan Google reviews for owner name mentions.
-    Customers often write things like 'the owner John was amazing'
-    or 'Maria, the owner, greeted us personally'.
-    Returns the best candidate name, or empty string.
+    Scan all Google reviews for owner name mentions using two tiers:
+      - High-confidence (full name):  weight 3 each match
+      - Medium-confidence (first name only): weight 1 each match
+
+    A first-name-only result needs ≥3 total weight to be returned
+    (i.e. it must appear 3 times, or a full name beats it at weight 3).
     """
-    candidates = {}
+    # scores keyed by lowercase name for dedup, values are (display_name, total_weight)
+    scores: dict[str, list] = {}
+
     for review in reviews:
         text = review.get("text", "")
         if not text:
             continue
-        for pattern in _OWNER_RE:
-            m = pattern.search(text)
-            if m:
-                name = m.group(1).strip()
-                if name not in _REJECT_NAMES and len(name.split()) >= 2:
-                    candidates[name] = candidates.get(name, 0) + 1
 
-    if not candidates:
+        # Find ALL matches in this review (findall, not just search)
+        for pat in _HIGH_RE:
+            for m in pat.finditer(text):
+                name = m.group(1).strip()
+                key  = name.lower()
+                if key not in _REJECT and len(key) > 2:
+                    entry = scores.setdefault(key, [name, 0])
+                    entry[1] += 3
+
+        for pat in _MED_RE:
+            for m in pat.finditer(text):
+                name = m.group(1).strip()
+                key  = name.lower()
+                if key not in _REJECT and len(key) > 2:
+                    entry = scores.setdefault(key, [name, 0])
+                    entry[1] += 1
+
+    if not scores:
         return ""
-    # Return the name mentioned most often across reviews
-    return max(candidates, key=candidates.get)
+
+    # Pick highest-weighted candidate; enforce minimum weight of 3 for single words
+    best_key = max(scores, key=lambda k: scores[k][1])
+    display_name, weight = scores[best_key]
+
+    # Single-word names need ≥3 weight (at least 3 medium hits or 1 high hit)
+    if len(display_name.split()) == 1 and weight < 3:
+        # Try to find a two-word name with any weight
+        two_word = [(k, v) for k, v in scores.items() if len(v[0].split()) >= 2]
+        if two_word:
+            best_key = max(two_word, key=lambda kv: kv[1][1])[0]
+            display_name = scores[best_key][0]
+        else:
+            return ""  # not confident enough
+
+    return display_name
 
 
 def fetch_place_details(client, place_id):

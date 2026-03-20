@@ -3,6 +3,7 @@ Scrapes a bar's website to extract:
   - Owner / manager name
   - Email address(es)
   - Instagram handle
+  - Facebook page
 """
 
 import re
@@ -20,20 +21,20 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-# Regex patterns
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
-INSTAGRAM_RE = re.compile(
-    r"(?:instagram\.com/|@)([a-zA-Z0-9_.]{1,30})"
-)
 
 # Keywords that suggest a page has owner info
 OWNER_PAGE_KEYWORDS = ["about", "contact", "our-story", "story", "team", "staff", "meet", "owner"]
 
-# Keywords near a name that suggest it's an owner/manager
+# Title keywords near a name that suggest it's an owner/manager
 OWNER_TITLE_KEYWORDS = [
     "owner", "co-owner", "founder", "co-founder", "proprietor",
     "operator", "manager", "general manager", "gm", "partner",
 ]
+
+# Slugs to skip when extracting social media handles from URLs
+_IG_SKIP  = {"p", "reel", "reels", "stories", "explore", "accounts", "share", "sharer", "tv", ""}
+_FB_SKIP  = {"sharer", "share", "login", "dialog", "groups", "pages", "events", "profile.php", ""}
 
 
 def _get_soup(url, timeout=10):
@@ -53,62 +54,76 @@ def _get_soup(url, timeout=10):
 
 def _extract_emails(text):
     """Return list of unique emails found in text, filtering out image/file extensions."""
-    emails = EMAIL_RE.findall(text)
-    filtered = []
     skip_ext = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".css", ".js")
-    for e in emails:
+    emails = []
+    for e in EMAIL_RE.findall(text):
         e_lower = e.lower()
         if not any(e_lower.endswith(ext) for ext in skip_ext):
-            filtered.append(e.lower())
-    return list(dict.fromkeys(filtered))  # dedupe preserving order
+            emails.append(e_lower)
+    return list(dict.fromkeys(emails))
 
 
-def _extract_instagram(text):
-    """Return first Instagram handle found in text."""
-    matches = INSTAGRAM_RE.findall(text)
-    # Filter out generic/false positives
-    bad = {"instagram", "share", "sharer", "p", "reel", "stories", "explore"}
-    for match in matches:
-        if match.lower() not in bad and len(match) > 1:
-            return "@" + match
-    return ""
+def _extract_social(soup):
+    """
+    Extract Instagram and Facebook handles by scanning <a href> tags only.
+    This avoids CSS/JS false positives (@media, @keyframes, @formatjs, etc.)
+    that appear when running regex on raw HTML source.
+    """
+    instagram = ""
+    facebook  = ""
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+
+        if not instagram and "instagram.com" in href:
+            m = re.search(r"instagram\.com/([A-Za-z0-9_.]+)/?", href)
+            if m and m.group(1).lower() not in _IG_SKIP:
+                instagram = "@" + m.group(1)
+
+        if not facebook and "facebook.com" in href:
+            # strip query strings before extracting slug
+            clean = href.split("?")[0].rstrip("/")
+            m = re.search(r"facebook\.com/([A-Za-z0-9_.]+)$", clean)
+            if m and m.group(1).lower() not in _FB_SKIP:
+                facebook = "fb.com/" + m.group(1)
+
+        if instagram and facebook:
+            break
+
+    return instagram, facebook
 
 
 def _find_owner_name(soup):
     """
     Try to extract an owner/manager name from the page.
-    Looks for owner title keywords near proper nouns.
+    Checks heading + paragraph tags for owner-keyword patterns.
     """
-    # Search in text nodes for patterns like "John Smith, Owner" or "Owner: Jane Doe"
-    text = soup.get_text(separator=" ", strip=True)
+    _title_group = "(?:" + "|".join(OWNER_TITLE_KEYWORDS) + ")"
 
-    # Pattern: "Name, Owner" or "Name - Owner"
-    pattern1 = re.compile(
-        r"([A-Z][a-z]+(?: [A-Z][a-z]+)+)[,\-–]\s*(?:" + "|".join(OWNER_TITLE_KEYWORDS) + r")",
-        re.IGNORECASE,
-    )
-    # Pattern: "Owner: Name" or "Owner | Name"
-    pattern2 = re.compile(
-        r"(?:" + "|".join(OWNER_TITLE_KEYWORDS) + r")[:\|]\s*([A-Z][a-z]+(?: [A-Z][a-z]+)+)",
-        re.IGNORECASE,
-    )
-    # Pattern: "Owner Name" in heading tags
-    for tag in soup.find_all(["h1", "h2", "h3", "h4", "p", "li", "span", "div"]):
-        tag_text = tag.get_text(separator=" ", strip=True)
-        m = pattern1.search(tag_text)
+    # Two-word+ name patterns (high confidence)
+    two_word_name = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)"
+    patterns = [
+        re.compile(rf"{two_word_name}[,\-–]\s*{_title_group}", re.IGNORECASE),
+        re.compile(rf"{_title_group}[:\|]\s*{two_word_name}", re.IGNORECASE),
+        re.compile(rf"\bowned\s+by\s+{two_word_name}", re.IGNORECASE),
+        re.compile(rf"\b{two_word_name}\s+(?:is\s+the|,\s*the)\s+{_title_group}", re.IGNORECASE),
+        re.compile(rf"\b{two_word_name}\s+\({_title_group}\)", re.IGNORECASE),
+        re.compile(rf"\b{two_word_name}\s+(?:owns|opened|founded|started)\s+(?:this|the)\b", re.IGNORECASE),
+    ]
+
+    for tag in soup.find_all(["h1", "h2", "h3", "h4", "p", "li", "span"]):
+        text = tag.get_text(separator=" ", strip=True)
+        for pat in patterns:
+            m = pat.search(text)
+            if m:
+                return m.group(1).strip()
+
+    # Fallback: scan full page text
+    full_text = soup.get_text(separator=" ", strip=True)
+    for pat in patterns:
+        m = pat.search(full_text)
         if m:
             return m.group(1).strip()
-        m = pattern2.search(tag_text)
-        if m:
-            return m.group(1).strip()
-
-    # Fallback: search full page text
-    m = pattern1.search(text)
-    if m:
-        return m.group(1).strip()
-    m = pattern2.search(text)
-    if m:
-        return m.group(1).strip()
 
     return ""
 
@@ -121,60 +136,51 @@ def _get_internal_links(soup, base_url):
         href = a["href"].strip()
         full_url = urljoin(base_url, href)
         parsed = urlparse(full_url)
-        # Must be same domain and match owner-page keywords
         if parsed.netloc == base_domain:
             path_lower = parsed.path.lower()
             if any(kw in path_lower for kw in OWNER_PAGE_KEYWORDS):
                 links.append(full_url)
-    return list(dict.fromkeys(links))  # dedupe
+    return list(dict.fromkeys(links))
 
 
 def scrape_website(website_url):
     """
     Scrape a bar website and return a dict with:
-      owner_name, emails (comma-separated), instagram
+      owner_name, email (comma-separated), instagram, facebook
     """
-    result = {"owner_name": "", "email": "", "instagram": ""}
+    result = {"owner_name": "", "email": "", "instagram": "", "facebook": ""}
 
     if not website_url:
         return result
 
-    # Normalize URL
     if not website_url.startswith("http"):
         website_url = "https://" + website_url
 
-    # --- Scrape homepage ---
     soup = _get_soup(website_url)
     if not soup:
         return result
 
-    page_text = soup.get_text(separator=" ", strip=True)
-    page_html = str(soup)
-
-    emails = _extract_emails(page_text)
-    instagram = _extract_instagram(page_html)
+    emails     = _extract_emails(soup.get_text(separator=" ", strip=True))
+    instagram, facebook = _extract_social(soup)
     owner_name = _find_owner_name(soup)
 
-    # --- Follow About/Contact sub-pages ---
-    sub_links = _get_internal_links(soup, website_url)
-    for link in sub_links[:4]:  # limit to 4 sub-pages
+    # Follow About/Contact sub-pages for more info
+    for link in _get_internal_links(soup, website_url)[:4]:
         time.sleep(0.8)
-        sub_soup = _get_soup(link)
-        if not sub_soup:
+        sub = _get_soup(link)
+        if not sub:
             continue
-        sub_text = sub_soup.get_text(separator=" ", strip=True)
-        sub_html = str(sub_soup)
-
-        emails += _extract_emails(sub_text)
-        if not instagram:
-            instagram = _extract_instagram(sub_html)
+        emails += _extract_emails(sub.get_text(separator=" ", strip=True))
+        if not instagram or not facebook:
+            ig2, fb2 = _extract_social(sub)
+            instagram = instagram or ig2
+            facebook  = facebook  or fb2
         if not owner_name:
-            owner_name = _find_owner_name(sub_soup)
+            owner_name = _find_owner_name(sub)
 
-    # Dedupe emails and join
-    unique_emails = list(dict.fromkeys(emails))
     result["owner_name"] = owner_name
-    result["email"] = ", ".join(unique_emails[:3])  # max 3 emails
-    result["instagram"] = instagram
+    result["email"]      = ", ".join(list(dict.fromkeys(emails))[:3])
+    result["instagram"]  = instagram
+    result["facebook"]   = facebook
 
     return result

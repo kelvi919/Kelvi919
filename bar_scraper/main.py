@@ -48,7 +48,7 @@ def run():
             web_data = scrape_website(website)
         else:
             print(f"    No website found, skipping web scrape.")
-            web_data = {"owner_name": "", "email": "", "instagram": ""}
+            web_data = {"owner_name": "", "email": "", "instagram": "", "facebook": ""}
 
         # Owner priority: website → Google reviews
         owner_name   = web_data["owner_name"] or bar.get("owner_from_reviews", "")
@@ -68,12 +68,14 @@ def run():
             "Owner Source":  owner_source,
             "Email":         web_data["email"],
             "Instagram":     web_data["instagram"],
+            "Facebook":      web_data["facebook"],
         }
         rows.append(row)
 
         print(f"    Owner:     {owner_name or '—'}  [{owner_source or '—'}]")
         print(f"    Email:     {web_data['email'] or '—'}")
         print(f"    Instagram: {web_data['instagram'] or '—'}")
+        print(f"    Facebook:  {web_data['facebook'] or '—'}")
 
         time.sleep(REQUEST_DELAY)
 
@@ -90,6 +92,7 @@ def run():
     with_phone     = df["Phone"].astype(bool).sum()
     with_email     = df["Email"].astype(bool).sum()
     with_instagram = df["Instagram"].astype(bool).sum()
+    with_facebook  = df["Facebook"].astype(bool).sum()
     with_owner     = df["Owner Name"].astype(bool).sum()
     from_website   = (df["Owner Source"] == "website").sum()
     from_reviews   = (df["Owner Source"] == "reviews").sum()
@@ -99,6 +102,7 @@ def run():
     print(f"  With phone:          {with_phone}/{total}")
     print(f"  With email:          {with_email}/{total}")
     print(f"  With Instagram:      {with_instagram}/{total}")
+    print(f"  With Facebook:       {with_facebook}/{total}")
     print(f"  With owner name:     {with_owner}/{total}")
     print(f"    └ from website:    {from_website}")
     print(f"    └ from reviews:    {from_reviews}")
