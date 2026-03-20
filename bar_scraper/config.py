@@ -10,7 +10,8 @@ if _env_file.exists():
             _key, _val = _line.split("=", 1)
             os.environ.setdefault(_key.strip(), _val.strip())
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+GOOGLE_API_KEY    = os.getenv("GOOGLE_PLACES_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Cities to search
 SEARCH_LOCATIONS = [
