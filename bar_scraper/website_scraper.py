@@ -4,6 +4,9 @@ Scrapes a bar's website to extract:
   - Email address(es)
   - Instagram handle
   - Facebook page
+
+Falls back to a DuckDuckGo search for social media when the website
+doesn't contain direct links.
 """
 
 import re
@@ -11,6 +14,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+from duckduckgo_search import DDGS
 
 HEADERS = {
     "User-Agent": (
@@ -141,6 +145,60 @@ def _get_internal_links(soup, base_url):
             if any(kw in path_lower for kw in OWNER_PAGE_KEYWORDS):
                 links.append(full_url)
     return list(dict.fromkeys(links))
+
+
+def search_social_ddg(bar_name, location="Sarasota FL"):
+    """
+    Search DuckDuckGo for a bar's Instagram and Facebook pages.
+    Called when the website scrape didn't find social links.
+
+    Tries three strategies per platform:
+      1. "[bar name] [city] instagram"  — general search
+      2. "[bar name] site:instagram.com" — pinned to the platform
+      3. "[bar name] site:facebook.com"  — same for Facebook
+    """
+    instagram = ""
+    facebook  = ""
+
+    try:
+        with DDGS() as ddgs:
+            # ── Instagram ──────────────────────────────────────────────────
+            for query in [
+                f'"{bar_name}" {location} instagram',
+                f'"{bar_name}" site:instagram.com',
+            ]:
+                if instagram:
+                    break
+                for r in ddgs.text(query, max_results=5):
+                    url = r.get("href", "") or r.get("url", "")
+                    if "instagram.com/" in url:
+                        m = re.search(r"instagram\.com/([A-Za-z0-9_.]+)/?", url)
+                        if m and m.group(1).lower() not in _IG_SKIP:
+                            instagram = "@" + m.group(1)
+                            break
+                time.sleep(0.6)
+
+            # ── Facebook ───────────────────────────────────────────────────
+            for query in [
+                f'"{bar_name}" {location} facebook',
+                f'"{bar_name}" site:facebook.com',
+            ]:
+                if facebook:
+                    break
+                for r in ddgs.text(query, max_results=5):
+                    url = r.get("href", "") or r.get("url", "")
+                    if "facebook.com/" in url:
+                        clean = url.split("?")[0].rstrip("/")
+                        m = re.search(r"facebook\.com/([A-Za-z0-9_.]+)$", clean)
+                        if m and m.group(1).lower() not in _FB_SKIP:
+                            facebook = "fb.com/" + m.group(1)
+                            break
+                time.sleep(0.6)
+
+    except Exception as e:
+        print(f"    [!] DDG search error for '{bar_name}': {e}")
+
+    return instagram, facebook
 
 
 def scrape_website(website_url):
