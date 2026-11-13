@@ -1,12 +1,11 @@
 # Hey there👋, im Kelvi - aka [kelvi919]
 
-In my spare time, I develop things as a hobby and post some of what I do on Github.
+In my spare time, I develop automations & indie games as a hobby and post some of what I do on Github.
 I am working on a variety of projects, as you can hopefully see in my repositories ;).
 You can see some of my work on GitHub and i would appreciate any help you can provide. 
-I can be reached via 
+I can be reached via instagram!
 
-
-unity engine folders and repos are not included for the safety of the projects.
+unity engine folders and repos are not included for the security of those projects.
 
 
 ### Tools and Languages 
